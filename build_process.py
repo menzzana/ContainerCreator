@@ -22,7 +22,7 @@ import os
 import subprocess
 import time
 #-----------------------------------------------------------------------
-# Variables
+# Constants
 #-----------------------------------------------------------------------
 FILE_FOLDER="/var/www/html/uploads"
 JOB_FOLDER="/var/www/html/jobs"

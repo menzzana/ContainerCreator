@@ -26,7 +26,7 @@ From the approved IP, the script is capable to...
 1. upload all files to the cgi-bin folder
 1. See to it to run python on the webserver.
    1. If not applicable `apt install python-is-python3`
-1. Edit ip.yaml` and add approved IP addresses.
+1. Edit `ip.yaml` and add approved IP addresses that you are planning to run the client from.
 1. Create folders for upload
    `mkdir /var/www/html/uploads`
    `chown -R www-data:www-data /var/www/html/uploads`
@@ -36,3 +36,5 @@ From the approved IP, the script is capable to...
 1. move `apptainer-build-worker.service` to `/etc/systemd/system/`
 1. Run `sudo systemctl daemon-reload`
 1. Run `sudo systemctl enable --now apptainer-build-worker.service`
+1. `build_container.sh` is the client. Move to the computer you would like to run it from.
+1. Edit `build_container.sh` and substitute [IP] for the IP address of the webserver.

@@ -33,7 +33,7 @@ from enum import Enum
 #-----------------------------------------------------------------------
 app = Bottle()
 #-----------------------------------------------------------------------
-# Variables
+# Constants
 #-----------------------------------------------------------------------
 VERSION="0.1"
 IP_ADRESS_FILE="ip.yaml"
@@ -62,7 +62,7 @@ def test_connection():
     client_ip = request.remote_addr
     return {"Connection": "established", "Version": VERSION, "IP": client_ip, "Approved": checkIP()}
 #-----------------------------------------------------------------------
-# curl -X POST -F "file=@file=@<name>.def" http://<IP>/cgi-bin/ContainerCreator/index.py/upload
+# curl -X POST -F "file=@<name>.def" http://<IP>/cgi-bin/ContainerCreator/index.py/upload
 @app.post('/upload')
 def upload():
     if not checkIP():
@@ -88,6 +88,8 @@ def create(build_id):
         return {"error": "AppTainer not installed"}
     folder_path = os.path.join(FILE_FOLDER,build_id)
     job_file = os.path.join(JOB_FOLDER, build_id + ".json")
+    if os.path.exists(job_file):
+        return {"error": "Creation process is already running"}
     job_data = {
         "id": build_id,
         "folder": folder_path,
