@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------
-from bottle import Bottle, run, request, response
+from bottle import Bottle, run, request, response, static_file
 import os
 import subprocess
 import shutil
@@ -38,11 +38,11 @@ app = Bottle()
 VERSION="0.1"
 IP_ADRESS_FILE="ip.yaml"
 FILE_FOLDER="/var/www/html/uploads"
+JOB_FOLDER="/var/www/html/jobs"
 RECIPE_FILE="recipe.def"
-TEMP_CONTAINER="tmp.sif"
 CONTAINER_PATH="container.sif"
 LOG_FILE="build.log"
-items = {}
+JOB_FILE="job.json"
 #-----------------------------------------------------------------------
 # Functions
 #-----------------------------------------------------------------------
@@ -56,13 +56,13 @@ def checkIP():
 #-----------------------------------------------------------------------
 # Main
 #-----------------------------------------------------------------------
-# curl http://<IP>/cgi-bin/index.py/test
+# curl http://<IP>/cgi-bin/ContainerCreator/index.py/test
 @app.route('/test')
 def test_connection():
     client_ip = request.remote_addr
     return {"Connection": "established", "Version": VERSION, "IP": client_ip, "Approved": checkIP()}
 #-----------------------------------------------------------------------
-# curl -X POST -F "file=@file=@<name>.def" http://<IP>/cgi-bin/index.py/upload
+# curl -X POST -F "file=@file=@<name>.def" http://<IP>/cgi-bin/ContainerCreator/index.py/upload
 @app.post('/upload')
 def upload():
     if not checkIP():
@@ -79,7 +79,7 @@ def upload():
         f.write(data)
     return {"message": "Uploaded file", "id": random_string}
 #-----------------------------------------------------------------------
-# curl http://<IP>/cgi-bin/index.py/create
+# curl http://<IP>/cgi-bin/ContainerCreator/index.py/create
 @app.get('/create/<build_id>')
 def create(build_id):
     if not checkIP():
@@ -87,46 +87,45 @@ def create(build_id):
     if shutil.which("apptainer") is None:
         return {"error": "AppTainer not installed"}
     folder_path = os.path.join(FILE_FOLDER,build_id)
-    log_file = os.path.join(folder_path, LOG_FILE)
-    with open(log_file, "w") as f:
-        subprocess.Popen(
-            [sys.executable, "create.py", folder_path],
-            stdout=f,
-            stderr=subprocess.STDOUT
-        )
+    job_file = os.path.join(JOB_FOLDER, build_id + ".json")
+    job_data = {
+        "id": build_id,
+        "folder": folder_path,
+        "timestamp": time.time()
+        }
+    with open(job_file, "w") as f:
+        json.dump(job_data, f)
     return {"message": "Creation process started", "id": build_id}
 #-----------------------------------------------------------------------
+# curl -o <FILENAME>.sif http://<IP>/cgi-bin/ContainerCreator/index.py/download/<ID>
 @app.get('/download/<build_id>')
 def download(build_id):
     if not checkIP():
         return {"error": "Not allowed"}
     folder_path = os.path.join(FILE_FOLDER, build_id)
-    container_path = os.path.join(folder_path, CONTAINER_PATH)
-    if not os.path.exists(container_path):
+    if not os.path.exists(os.path.join(folder_path, CONTAINER_PATH)):
         response.status = 404
         return {"error": "Container not found"}
     try:
         response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = f'attachment; filename="{container_path}"'
-        return static_file(f"{container_path}", root=folder_path, download=True)
+        response.headers['Content-Disposition'] = f'attachment; filename="{CONTAINER_PATH}"'
+        return static_file(CONTAINER_PATH, root=folder_path, download=True)
     except Exception as e:
         response.status = 500
         return {"error": "Download failed", "details": str(e)}
 #-----------------------------------------------------------------------
-# curl http://<IP>/cgi-bin/index.py/status/<ID>
+# curl http://<IP>/cgi-bin/ContainerCreator/index.py/status/<ID>
 @app.get('/status/<build_id>')
 def status(build_id):
     if not checkIP():
         return {"error": "Not allowed"}
     folder_path = os.path.join(FILE_FOLDER, build_id)
     recipe_path = os.path.join(folder_path, RECIPE_FILE)
-    tmp_path = os.path.join(folder_path, TEMP_CONTAINER)
     container_path = os.path.join(folder_path, CONTAINER_PATH)
     status_info = {
         "id": build_id,
         "folder_exists": os.path.exists(folder_path),
         "recipe_exists": os.path.exists(recipe_path),
-        "temporary_file_exists": os.path.exists(tmp_path),
         "container_exists": os.path.exists(container_path)
         }
     if os.path.exists(container_path):
@@ -137,7 +136,24 @@ def status(build_id):
         status_info["status"] = "building or failed"
     return status_info
 #-----------------------------------------------------------------------
-# curl http://<IP>/cgi-bin/index.py/cleanup/<ID>
+# curl -o <LOGFILENAME> http://<IP>/cgi-bin/ContainerCreator/index.py/log/<ID>
+@app.get('/log/<build_id>')
+def getLog(build_id):
+    if not checkIP():
+        return {"error": "Not allowed"}
+    folder_path = os.path.join(FILE_FOLDER, build_id)
+    if not os.path.exists(os.path.join(folder_path, LOG_FILE)):
+        response.status = 404
+        return {"error": "Container not found"}
+    try:
+        response.headers['Content-Type'] = 'application/octet-stream'
+        response.headers['Content-Disposition'] = f'attachment; filename="{LOG_FILE}"'
+        return static_file(LOG_FILE, root=folder_path, download=True)
+    except Exception as e:
+        response.status = 500
+        return {"error": "Download failed", "details": str(e)}
+#-----------------------------------------------------------------------
+# curl http://<IP>/cgi-bin/ContainerCreator/index.py/cleanup/<ID>
 @app.get('/cleanup/<build_id>')
 def cleanup_build(build_id):
     if not checkIP():

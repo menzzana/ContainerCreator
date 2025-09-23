@@ -30,5 +30,9 @@ From the approved IP, the script is capable to...
 1. Create folders for upload
    `mkdir /var/www/html/uploads`
    `chown -R www-data:www-data /var/www/html/uploads`
-
-
+1. Create folders for jobs
+   `mkdir /var/www/html/jobs`
+   `chown -R www-data:www-data /var/www/html/jobs`
+1. move `apptainer-build-worker.service` to `/etc/systemd/system/`
+1. Run `sudo systemctl daemon-reload`
+1. Run `sudo systemctl enable --now apptainer-build-worker.service`

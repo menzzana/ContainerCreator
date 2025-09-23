@@ -1,0 +1,11 @@
+[Unit]
+Description=Apptainer Build Worker
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/python3 /usr/lib/cgi-bin/ContainerCreator/build_process.py
+Restart=always
+User=root
+
+[Install]
+WantedBy=multi-user.target
