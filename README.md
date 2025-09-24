@@ -36,5 +36,6 @@ From the approved IP, the script is capable to...
 1. move `apptainer-build-worker.service` to `/etc/systemd/system/`
 1. Run `sudo systemctl daemon-reload`
 1. Run `sudo systemctl enable --now apptainer-build-worker.service`
+   1. In case you have changed the code also `sudo systemctl restart apptainer-build-worker.service`
 1. `build_container.sh` is the client. Move to the computer you would like to run it from.
 1. Edit `build_container.sh` and substitute [IP] for the IP address of the webserver.

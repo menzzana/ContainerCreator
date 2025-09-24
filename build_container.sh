@@ -76,7 +76,6 @@ fi
 echo "Uploading $DEF_FILE..."
 BUILD_ID=$(curl -s -X POST -F "file=@$DEF_FILE" "$SERVER/upload" \
            | grep -Po '"id":\s*"\K[^"]+')
-
 if [ -z "$BUILD_ID" ]; then
     echo "Upload failed."
     exit 1
@@ -85,7 +84,7 @@ echo "Uploaded! Build ID: $BUILD_ID"
 # Building
 curl -s "$SERVER/create/$BUILD_ID" > /dev/null
 echo "Build queued..."
-# Stream log while waiting
+# Check status every 2 seconds. Stream log while waiting
 LOG_URL="$SERVER/log/$BUILD_ID"
 TMP_LOG=$(mktemp)
 trap "rm -f $TMP_LOG; exit" INT TERM
@@ -114,11 +113,12 @@ rm -f "$TMP_LOG"
 # Download the container
 OUTPUT_FILE="$(basename "$DEF_FILE" .def).sif"
 curl -L -o "$OUTPUT_FILE" "$SERVER/download/$BUILD_ID"
-# Clean Up
-curl "$SERVER/cleanup/$BUILD_ID"
 echo "Download complete: $OUTPUT_FILE"
+# Clean Up
+echo "Removing old files"
+curl "$SERVER/cleanup/$BUILD_ID"
 if [ "$SANDBOX" = true ]; then
-    echo "convert to sandbox"
+    echo "Convert to sandbox"
     $CONTAINER_COMMAND build --sandbox "$(basename "$OUTPUT_FILE" .sif)" "$OUTPUT_FILE"
     rm "$OUTPUT_FILE"
 fi

@@ -31,9 +31,13 @@ CONTAINER_PATH="container.sif"
 LOG_FILE="build.log"
 JOB_FILE="job.json"
 #-----------------------------------------------------------------------
-def process_job(job_path):
+def process_job(job_path, age):
     with open(job_path) as f:
         job = json.load(f)
+    if age > 3600:
+        shutil.rmtree(job["folder"])
+        os.remove(job_path)
+        return
     folder_path = job["folder"]
     file_path = os.path.join(folder_path, RECIPE_FILE)
     container_path = os.path.join(folder_path, CONTAINER_PATH)
@@ -46,7 +50,10 @@ def process_job(job_path):
 def main():
     while True:
         for job in os.listdir(JOB_FOLDER):
-            process_job(os.path.join(JOB_FOLDER, job))
+            job_path = os.path.join(JOB_FOLDER, job)
+            mtime = os.path.getmtime(job_path)
+            age_seconds = time.time() - mtime
+            process_job(job_path, age_seconds)
         time.sleep(10)  # check every 10 seconds
 #-----------------------------------------------------------------------
 if __name__ == "__main__":
