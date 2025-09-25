@@ -53,6 +53,10 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+if [[ $SERVER == *"<IP>"* ]]; then
+    echo "Error: No IP is set"
+    exit 1
+fi
 CONTAINER_COMMAND=""
 if command -v singularity >/dev/null 2>&1; then
     CONTAINER_COMMAND="singularity"

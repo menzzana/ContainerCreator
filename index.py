@@ -54,6 +54,14 @@ def checkIP():
     ip_list = ips.get("ip", [])
     return client_ip in ip_list
 #-----------------------------------------------------------------------
+def cleanOldBuilds():
+    for build in os.listdir(FILE_FOLDER):
+        build_path = os.path.join(FILE_FOLDER, build)
+        mtime = os.path.getmtime(build_path)
+        age_seconds = time.time() - mtime
+        if age_seconds > 3600:
+            shutil.rmtree(build_path)
+#-----------------------------------------------------------------------
 # Main
 #-----------------------------------------------------------------------
 # curl http://<IP>/cgi-bin/ContainerCreator/index.py/test
@@ -160,6 +168,7 @@ def getLog(build_id):
 def cleanup_build(build_id):
     if not checkIP():
         return {"error": "Not allowed"}
+    cleanOldBuilds()
     folder_path = os.path.join(FILE_FOLDER, build_id)
     if os.path.exists(folder_path):
         try:
