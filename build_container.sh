@@ -23,13 +23,15 @@ SERVER="http://<IP>/cgi-bin/ContainerCreator/index.py"
 DEF_FILE=""
 SANDBOX=true
 VERBOSE=false
+TEST=false
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             echo "Usage: [PARAM] <recipe.def>"
-            echo "-n, --nosandbox Does not convert a container into a sandbox"
-            echo "-v, --verbose shows log while container is being created"
-            echo "-h, --help shows how to use and available parameters"
+            echo "-n, --nosandbox. Does not convert a container into a sandbox"
+            echo "-v, --verbose. Shows log while container is being created"
+            echo "-h, --help. Shows how to use and available parameters"
+            echo "-t, --test. Test connection to the remote server" 
             exit 0
             ;;
         -n|--nosandbox)
@@ -38,6 +40,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -v|--verbose)
             VERBOSE=true
+            shift
+            ;;
+        -t|--test)
+            TEST=true
             shift
             ;;
         -*)
@@ -56,6 +62,20 @@ done
 if [[ $SERVER == *"<IP>"* ]]; then
     echo "Error: No IP is set"
     exit 1
+fi
+if [ "$TEST" = true ]; then
+    CONNECTION=$(curl -s "$SERVER/test" | grep -Po "established")
+    APPROVAL=$(curl -s "$SERVER/test" | grep -Po "Approved: true")
+    if [[ $CONNECTION != "established" ]]; then
+        echo "No connection to remote building server"
+        exit 1
+    fi  
+    if [[ $APPROVAL == "\"Approved\": false" ]]; then
+        echo "Connection is not accepted to remote building server"
+        exit 1
+    fi  
+    echo "Connection is accepted to remote building server"
+    exit 0
 fi
 CONTAINER_COMMAND=""
 if command -v singularity >/dev/null 2>&1; then
@@ -109,6 +129,10 @@ while true; do
     STATUS=$(curl -s "$SERVER/status/$BUILD_ID" | grep -Po '"status":\s*"\K[^"]+')
     if [ "$STATUS" == "ready" ]; then
         echo "Build finished!"
+        break
+    fi
+    if [ "$STATUS" == "failed" ]; then
+        echo "Build failed!"
         break
     fi
     sleep 2

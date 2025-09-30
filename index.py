@@ -42,7 +42,7 @@ JOB_FOLDER="/var/www/html/jobs"
 RECIPE_FILE="recipe.def"
 CONTAINER_PATH="container.sif"
 LOG_FILE="build.log"
-JOB_FILE="job.json"
+JOB_FILE=".json"
 #-----------------------------------------------------------------------
 # Functions
 #-----------------------------------------------------------------------
@@ -95,7 +95,7 @@ def create(build_id):
     if shutil.which("apptainer") is None:
         return {"error": "AppTainer not installed"}
     folder_path = os.path.join(FILE_FOLDER,build_id)
-    job_file = os.path.join(JOB_FOLDER, build_id + ".json")
+    job_file = os.path.join(JOB_FOLDER, build_id + JOB_FILE)
     if os.path.exists(job_file):
         return {"error": "Creation process is already running"}
     job_data = {
@@ -132,9 +132,11 @@ def status(build_id):
     folder_path = os.path.join(FILE_FOLDER, build_id)
     recipe_path = os.path.join(folder_path, RECIPE_FILE)
     container_path = os.path.join(folder_path, CONTAINER_PATH)
+    job_file = os.path.join(JOB_FOLDER, build_id + JOB_FILE)
     status_info = {
         "id": build_id,
         "folder_exists": os.path.exists(folder_path),
+        "job_exists": os.path.exists(job_file),
         "recipe_exists": os.path.exists(recipe_path),
         "container_exists": os.path.exists(container_path)
         }
@@ -142,8 +144,11 @@ def status(build_id):
         status_info["container_size_bytes"] = os.path.getsize(container_path)
         status_info["download_url"] = container_path
         status_info["status"] = "ready"
+        return status_info
+    if os.path.exists(job_file):
+        status_info["status"] = "building"
     else:
-        status_info["status"] = "building or failed"
+        status_info["status"] = "failed"
     return status_info
 #-----------------------------------------------------------------------
 # curl -o <LOGFILENAME> http://<IP>/cgi-bin/ContainerCreator/index.py/log/<ID>
