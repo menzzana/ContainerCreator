@@ -21,48 +21,38 @@ import json
 import os
 import subprocess
 import time
-from concurrent.futures import ProcessPoolExecutor, as_completed
+import sys
 #-----------------------------------------------------------------------
 # Constants
 #-----------------------------------------------------------------------
 FILE_FOLDER="/var/www/html/uploads"
-JOB_FOLDER="/var/www/html/jobs"
 RECIPE_FILE="recipe.def"
 CONTAINER_PATH="container.sif"
 LOG_FILE="build.log"
-JOB_FILE="job.json"
+LOCK_FILE="create.lock"
 #-----------------------------------------------------------------------
-def process_job(job_path):
+def create_container(build_id):
     try:
-        if not os.path.exists(job_path):
-            return
-        with open(job_path) as f:
-            job = json.load(f)
-        folder_path = job["folder"]
+        folder_path = os.path.join(FILE_FOLDER,build_id)
+        if not os.path.exists(folder_path):
+            return        
         file_path = os.path.join(folder_path, RECIPE_FILE)
         container_path = os.path.join(folder_path, CONTAINER_PATH)
         log_file = os.path.join(folder_path, LOG_FILE)
-        build_cmd = ["apptainer", "build", container_path, file_path]
-        with open(log_file, "x") as log:
-            result = subprocess.run(build_cmd, stdout=log, stderr=subprocess.STDOUT)
+        lock_file = os.path.join(folder_path,LOCK_FILE)
+        result = subprocess.run(
+            ["apptainer", "build", "--fakeroot", container_path, file_path],
+            check=True
+            )
     except FileExistsError:
         return
     except Exception as e:
-        print(f"Build failed for {job_path}: {e}")
-    os.remove(job_path)
+        print(f"Build failed for {build_id}: {e}")
+    finally:
+        os.remove(lock_file)
 #-----------------------------------------------------------------------
-def main():
-    with ProcessPoolExecutor(max_workers=4) as executor:
-        futures = set()
-        while True:
-            for job in os.listdir(JOB_FOLDER):
-                job_path = os.path.join(JOB_FOLDER, job)
-                future = executor.submit(process_job, job_path)
-                futures.add(future)
-            done = {f for f in futures if f.done()}
-            futures -= done
-            time.sleep(10)
-#-----------------------------------------------------------------------
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    args = sys.argv[2:]
+    if sys.argv[1] == 'create':
+        create_container(*args)
 #-----------------------------------------------------------------------

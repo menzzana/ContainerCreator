@@ -15,6 +15,7 @@ From the approved IP, the script is capable to...
 
 - The Apache HTTP Server with **cgi-bin** More information with https://httpd.apache.org/
   - Apptainer installed
+  - fakeroot installed (Default on many UBUNTU installations)
   - Bottle https://bottlepy.org/docs/dev/
   - Python3
 
@@ -30,12 +31,9 @@ From the approved IP, the script is capable to...
 1. Create folders for upload
    `mkdir /var/www/html/uploads`
    `chown -R www-data:www-data /var/www/html/uploads`
-1. Create folders for jobs
-   `mkdir /var/www/html/jobs`
-   `chown -R www-data:www-data /var/www/html/jobs`
-1. move `apptainer-build-worker.service` to `/etc/systemd/system/`
-1. Run `sudo systemctl daemon-reload`
-1. Run `sudo systemctl enable --now apptainer-build-worker.service`
-   1. In case you have changed the code also `sudo systemctl restart apptainer-build-worker.service`
+1. Add permission for fakeroot by
+   1. `echo "www-data::100000:65536" >> /etc/subuid`
+   1. `echo "www-data::100000:65536" >> /etc/subgid`
+   1. In this case **www-data** is the apache user, which could be different
 1. `build_container.sh` is the client. Move to the computer you would like to run it from.
 1. Edit `build_container.sh` and substitute [IP] for the IP address of the webserver.

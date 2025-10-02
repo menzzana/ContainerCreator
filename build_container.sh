@@ -140,11 +140,11 @@ done
 rm -f "$TMP_LOG"
 # Download the container
 OUTPUT_FILE="$(basename "$DEF_FILE" .def).sif"
-curl -L -o "$OUTPUT_FILE" "$SERVER/download/$BUILD_ID"
+curl -s -L -o "$OUTPUT_FILE" "$SERVER/download/$BUILD_ID" > /dev/null
 echo "Download complete: $OUTPUT_FILE"
 # Clean Up
 echo "Removing old files"
-curl "$SERVER/cleanup/$BUILD_ID"
+curl -s "$SERVER/cleanup/$BUILD_ID" > /dev/null
 if [ "$SANDBOX" = true ]; then
     echo "Convert to sandbox"
     $CONTAINER_COMMAND build --sandbox "$(basename "$OUTPUT_FILE" .sif)" "$OUTPUT_FILE"

@@ -38,11 +38,10 @@ app = Bottle()
 VERSION="0.1"
 IP_ADRESS_FILE="ip.yaml"
 FILE_FOLDER="/var/www/html/uploads"
-JOB_FOLDER="/var/www/html/jobs"
 RECIPE_FILE="recipe.def"
 CONTAINER_PATH="container.sif"
 LOG_FILE="build.log"
-JOB_FILE=".json"
+LOCK_FILE="create.lock"
 #-----------------------------------------------------------------------
 # Functions
 #-----------------------------------------------------------------------
@@ -95,16 +94,18 @@ def create(build_id):
     if shutil.which("apptainer") is None:
         return {"error": "AppTainer not installed"}
     folder_path = os.path.join(FILE_FOLDER,build_id)
-    job_file = os.path.join(JOB_FOLDER, build_id + JOB_FILE)
-    if os.path.exists(job_file):
+    lock_file = os.path.join(folder_path,LOCK_FILE)
+    if os.path.exists(lock_file):
         return {"error": "Creation process is already running"}
-    job_data = {
-        "id": build_id,
-        "folder": folder_path,
-        "timestamp": time.time()
-        }
-    with open(job_file, "w") as f:
-        json.dump(job_data, f)
+    log_file = os.path.join(folder_path, LOG_FILE)
+    with open(log_file, "x") as log:
+        proc=subprocess.Popen(
+            [sys.executable,'build_process.py','create',build_id],
+            stdout=log,
+            stderr=subprocess.STDOUT
+            )
+    with open(lock_file, "w") as f:
+        json.dump({"pid": proc.pid, "id": build_id}, f)
     return {"message": "Creation process started", "id": build_id}
 #-----------------------------------------------------------------------
 # curl -o <FILENAME>.sif http://<IP>/cgi-bin/ContainerCreator/index.py/download/<ID>
@@ -132,11 +133,11 @@ def status(build_id):
     folder_path = os.path.join(FILE_FOLDER, build_id)
     recipe_path = os.path.join(folder_path, RECIPE_FILE)
     container_path = os.path.join(folder_path, CONTAINER_PATH)
-    job_file = os.path.join(JOB_FOLDER, build_id + JOB_FILE)
+    lock_file = os.path.join(folder_path,LOCK_FILE)
     status_info = {
         "id": build_id,
         "folder_exists": os.path.exists(folder_path),
-        "job_exists": os.path.exists(job_file),
+        "job_exists": os.path.exists(lock_file),
         "recipe_exists": os.path.exists(recipe_path),
         "container_exists": os.path.exists(container_path)
         }
@@ -145,7 +146,7 @@ def status(build_id):
         status_info["download_url"] = container_path
         status_info["status"] = "ready"
         return status_info
-    if os.path.exists(job_file):
+    if os.path.exists(lock_file):
         status_info["status"] = "building"
     else:
         status_info["status"] = "failed"
