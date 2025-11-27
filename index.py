@@ -87,8 +87,8 @@ def upload():
     return {"message": "Uploaded file", "id": random_string}
 #-----------------------------------------------------------------------
 # curl http://<IP>/cgi-bin/ContainerCreator/index.py/create
-@app.get('/create/<build_id>')
-def create(build_id):
+@app.get('/create/<build_id>/<env>')
+def create(build_id, env=None):
     if not checkIP():
         return {"error": "Not allowed"}
     if shutil.which("apptainer") is None:
@@ -100,7 +100,7 @@ def create(build_id):
     log_file = os.path.join(folder_path, LOG_FILE)
     with open(log_file, "x") as log:
         proc=subprocess.Popen(
-            [sys.executable,'build_process.py','create',build_id],
+            [sys.executable,'build_process.py','create',build_id,env],
             stdout=log,
             stderr=subprocess.STDOUT
             )

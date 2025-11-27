@@ -37,3 +37,18 @@ From the approved IP, the script is capable to...
    1. In this case **www-data** is the apache user, which could be different
 1. `build_container.sh` is the client. Move to the computer you would like to run it from.
 1. Edit `build_container.sh` and substitute [IP] for the IP address of the webserver.
+
+## Cross-compilation
+
+In order to develop containers for ARM you need to add extra packages
+
+```
+sudo apt-get install qemu-user-static binfmt-support
+```
+
+## How to run
+
+After everything has been installed according to the installation procedure
+use `build_container.sh [recipe].def` to create a container on the client.
+
+Use `build_container.sh -h` to get information how to set various parameters.

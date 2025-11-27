@@ -24,11 +24,13 @@ DEF_FILE=""
 SANDBOX=true
 VERBOSE=false
 TEST=false
+ENV=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         -h|--help)
             echo "Usage: [PARAM] <recipe.def>"
             echo "-n, --nosandbox. Does not convert a container into a sandbox"
+            echo "-a, --arm. Builds a container for arm64 environment"
             echo "-v, --verbose. Shows log while container is being created"
             echo "-h, --help. Shows how to use and available parameters"
             echo "-t, --test. Test connection to the remote server" 
@@ -44,6 +46,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--test)
             TEST=true
+            shift
+            ;;
+        -a|--arm)
+            ENV="arm"
             shift
             ;;
         -*)
@@ -106,7 +112,7 @@ if [ -z "$BUILD_ID" ]; then
 fi
 echo "Uploaded! Build ID: $BUILD_ID"
 # Building
-curl -s "$SERVER/create/$BUILD_ID" > /dev/null
+curl -s "$SERVER/create/$BUILD_ID/$ENV" > /dev/null
 echo "Build queued..."
 # Check status every 2 seconds. Stream log while waiting
 LOG_URL="$SERVER/log/$BUILD_ID"
