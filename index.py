@@ -30,6 +30,7 @@ import yaml
 import random
 import string
 from enum import Enum
+import hashlib
 #-----------------------------------------------------------------------
 app = Bottle()
 #-----------------------------------------------------------------------
@@ -60,6 +61,13 @@ def cleanOldBuilds():
         age_seconds = time.time() - mtime
         if age_seconds > 3600:
             shutil.rmtree(build_path)
+#-----------------------------------------------------------------------
+def md5sum(filename):
+    hash_md5 = hashlib.md5()
+    with open(filename, "rb") as fp:
+        for chunk in iter(lambda: fp.read(4096), b""):
+            hash_md5.update(chunk)
+    return hash_md5.hexdigest()
 #-----------------------------------------------------------------------
 # Main
 #-----------------------------------------------------------------------
@@ -119,8 +127,10 @@ def download(build_id):
         return {"error": "Container not found"}
     try:
         response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = f'attachment; filename="{CONTAINER_PATH}"'
-        return static_file(CONTAINER_PATH, root=folder_path, download=True)
+        response.headers['Content-Disposition'] = f'attachment; filename="{os.path.basename(CONTAINER_PATH)}"'
+        response.headers['Cache-Control'] = 'no-transform'
+        response.headers['Content-Encoding'] = 'identity'
+        return static_file(os.path.basename(CONTAINER_PATH), root=folder_path, download=True)
     except Exception as e:
         response.status = 500
         return {"error": "Download failed", "details": str(e)}
@@ -141,15 +151,16 @@ def status(build_id):
         "recipe_exists": os.path.exists(recipe_path),
         "container_exists": os.path.exists(container_path)
         }
+    if os.path.exists(lock_file):
+        status_info["status"] = "building"
+        return status_info
     if os.path.exists(container_path):
+        status_info["md5_sum"] = md5sum(container_path)
         status_info["container_size_bytes"] = os.path.getsize(container_path)
         status_info["download_url"] = container_path
         status_info["status"] = "ready"
         return status_info
-    if os.path.exists(lock_file):
-        status_info["status"] = "building"
-    else:
-        status_info["status"] = "failed"
+    status_info["status"] = "failed"
     return status_info
 #-----------------------------------------------------------------------
 # curl -o <LOGFILENAME> http://<IP>/cgi-bin/ContainerCreator/index.py/log/<ID>
@@ -163,8 +174,10 @@ def getLog(build_id):
         return {"error": "Container not found"}
     try:
         response.headers['Content-Type'] = 'application/octet-stream'
-        response.headers['Content-Disposition'] = f'attachment; filename="{LOG_FILE}"'
-        return static_file(LOG_FILE, root=folder_path, download=True)
+        response.headers['Content-Disposition'] = f'attachment; filename="{os.path.basename(LOG_FILE)}"'
+        response.headers['Cache-Control'] = 'no-transform'
+        response.headers['Content-Encoding'] = 'identity'
+        return static_file(os.path.basename(LOG_FILE), root=folder_path, download=True)
     except Exception as e:
         response.status = 500
         return {"error": "Download failed", "details": str(e)}

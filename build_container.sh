@@ -132,9 +132,12 @@ while true; do
             LAST_SIZE=$CUR_SIZE
         fi
     fi
-    STATUS=$(curl -s "$SERVER/status/$BUILD_ID" | grep -Po '"status":\s*"\K[^"]+')
+    INFO=$(curl -s "$SERVER/status/$BUILD_ID")
+    STATUS=$(echo "$INFO" | grep -Po '"status":\s*"\K[^"]+')
     if [ "$STATUS" == "ready" ]; then
         echo "Build finished!"
+        echo "File size: $(echo "$INFO" | grep -Po '"container_size_bytes":\s*\K[0-9]+')"
+        echo "MD5_SUM: $(echo "$INFO" | grep -Po '"md5_sum":\s*"\K[^"]+')"
         break
     fi
     if [ "$STATUS" == "failed" ]; then
